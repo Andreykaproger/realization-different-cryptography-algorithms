@@ -2,6 +2,10 @@ import struct
 import secrets
 
 
+def get_block_size(n: int) -> int:
+    return (n.bit_length() - 1) // 8
+
+
 def key_to_words(key):
     return struct.unpack(">4I", key)
 
@@ -36,6 +40,14 @@ def split_blocks(data:bytes, block_size = 8):
         blocks.append(data[i:i+block_size])
 
     return blocks
+
+
+def block_to_int(block):
+    return int.from_bytes(block, byteorder="big")
+
+
+def int_to_block(value: int, block_size: int) -> bytes:
+    return value.to_bytes(block_size, byteorder="big")
 
 
 def remove_padding(data:bytes, block_size = 8):
