@@ -1,5 +1,22 @@
 import struct
+import random
 import secrets
+
+
+def rotr(x:int, n:int, word_size: int) -> int:
+    mask = (1 << word_size) - 1
+    n %= word_size
+    return ((x >> n) | (x << (word_size-n))) & mask
+
+
+def add_hash_padding(message: bytes, block_size: int) -> bytes:
+    message_bit_length = len(message) * 8
+
+    padded = message + b"\x80"
+    zeros = (block_size - block_size // 8 - len(padded)) % block_size
+    padded += b"\x00" * zeros
+    padded += message_bit_length.to_bytes(block_size // 8, byteorder="big")
+    return padded
 
 
 def get_block_size(n: int) -> int:
@@ -18,6 +35,7 @@ def generate_key():
     key = secrets.token_bytes(16)
 
     return struct.unpack(">4I", key)
+
 
 def block_to_words(block):
     return struct.unpack(">2I", block)
@@ -65,3 +83,15 @@ def remove_padding(data:bytes, block_size = 8):
         raise ValueError("Padding is incorrect")
 
     return data[:-padding]
+
+
+def string_to_bitstring(s: str, encoding: str = "utf-8") -> str:
+    return "".join(format(byte, "08b") for byte in s.encode(encoding))
+
+
+def flip_random_bit(bitstring: str, ) -> str:
+
+    rng = random.Random()
+    i = rng.randrange(len(bitstring))
+    flipped = "1" if bitstring[i] == "0" else "0"
+    return bitstring[:i] + flipped + bitstring[i + 1:]

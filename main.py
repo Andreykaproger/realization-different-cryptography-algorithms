@@ -1,6 +1,7 @@
 from xtea import XTEA
 from utils import key_to_words, generate_key, key_to_bytes
 from rsa import RSA
+from sha_2 import SHA2, avalanche_effect
 
 
 def main_xtea():
@@ -34,7 +35,6 @@ def main_xtea():
                 print("Выберете заново способ задания ключа:")
 
         raise ValueError("Некорректный выбор ключа")
-
 
 
     def read_hex_key():
@@ -107,6 +107,7 @@ def choose_mode():
         "Выберите режим:\n"
         "1. Шифрование XTEA\n"
         "2. Шифрование RSA\n"
+        "3. Хэширование SHA-2\n"
         "Выберете необходимый параметр:"
     )
     tries = 0
@@ -117,9 +118,11 @@ def choose_mode():
                 return main_xtea()
             elif parameter == 2:
                 return main_rsa()
+            elif parameter == 3:
+                return main_sha2()
 
             else:
-                raise ValueError("Выберете вариант от 1 до 2:")
+                raise ValueError("Выберете вариант от 1 до 3:")
 
 
         except ValueError as e:
@@ -129,6 +132,61 @@ def choose_mode():
             print("Выберете заново режим:")
 
     raise ValueError("Некорректный выбор ключа")
+
+
+def main_sha2():
+
+    def choose_key():
+        print(
+        "Выберите версию SHA-2:\n"
+        "1. SHA-256\n"
+        "2. SHA-512\n"
+        "Выберете необходимый параметр:"
+    )
+        tries = 0
+        while tries < 5:
+            try:
+                parameter = int(input())
+                if parameter == 1:
+                    version = "sha_256"
+                elif parameter == 2:
+                    version = "sha_512"
+                else:
+                    raise ValueError("Выберете вариант от 1 до 2:")
+
+                return version
+
+            except ValueError as e:
+                tries += 1
+                print(f"Ошибка: {e}")
+                print(f"Попыток осталось: {5-tries}")
+                print("Выберете заново необходимый размер хэша:")
+
+        raise ValueError("Некорректный выбор ключа")
+
+    version = choose_key()
+
+    text = input("Введите текст, который хотите хэшировать:")
+
+    sha2 = SHA2()
+
+    results = {
+        "sha_256": sha2.sha_256(text.encode()),
+        "sha_512": sha2.sha_512(text.encode())
+    }
+
+    text_hash = results[version]
+
+    distance, percent, hash_len = avalanche_effect(sha2, text, algorithm=version)
+
+    print(
+    f"Исходный текст в формате hex: {text.encode().hex()}\n"
+    f"Хэш исходного текста в формате hex: {text_hash.hex()}\n"
+    "Оценка лавинного эффекта:\n"
+    f"Изменено битов во входных данных: 1\n"
+    f"Различается битов хэша: {distance} из {hash_len * 8}\n"
+    f"Лавинный эффект: {percent:.2f}%"
+    )
 
 if __name__ == "__main__":
     choose_mode()

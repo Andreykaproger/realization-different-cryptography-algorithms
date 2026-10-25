@@ -59,3 +59,13 @@ def modinv(a, m) -> int:
         raise ValueError("Обратный элемент не существует")
 
     return old_s % m
+
+
+def hamming_distance_bits(b1: str, b2: str) -> tuple[int, float]:
+
+    n = max(len(b1), len(b2))
+    b1 = b1.ljust(n, "0")
+    b2 = b2.ljust(n, "0")
+    distance = sum(a != b for a, b in zip(b1, b2))
+    percent = distance / n * 100 if n else 0.0
+    return distance, percent
