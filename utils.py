@@ -1,3 +1,4 @@
+import base64
 import struct
 import random
 import secrets
@@ -95,3 +96,40 @@ def flip_random_bit(bitstring: str, ) -> str:
     i = rng.randrange(len(bitstring))
     flipped = "1" if bitstring[i] == "0" else "0"
     return bitstring[:i] + flipped + bitstring[i + 1:]
+
+
+def encode_b64(text: bytes):
+    return base64.b64encode(text).decode("ascii")
+
+
+def decode_b64(text: str) -> bytes:
+    return base64.b64decode(text, validate=True)
+
+
+def blocks_to_b64(blocks: list[int], bit_size: int) -> str:
+    text = []
+
+    for block in blocks:
+        text.append(
+            int_to_block(block, (bit_size + 7) // 8)
+        )
+
+    data_bytes = b"".join(text)
+
+    return encode_b64(data_bytes)
+
+
+def b64_to_blocks(text: str, bit_size: int) -> list[int]:
+    ciphertext_bytes = decode_b64(text)
+
+    cipher_block_size = (bit_size + 7 )// 8
+
+    if len(ciphertext_bytes) % cipher_block_size != 0:
+        raise ValueError("Invalid ciphertext length")
+
+    return [
+        block_to_int(
+            ciphertext_bytes[i:i+cipher_block_size]
+        )
+        for i in range(0, len(ciphertext_bytes), cipher_block_size)
+    ]

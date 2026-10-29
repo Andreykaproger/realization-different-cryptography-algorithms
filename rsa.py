@@ -1,20 +1,21 @@
-import base64
 import secrets
 import math
 
+from math_utils import miller_rabin, power, modinv
 from utils import (
     split_blocks,
     block_to_int,
     int_to_block,
     get_block_size,
+    b64_to_blocks,
+    blocks_to_b64
 )
-from math_utils import miller_rabin, power, modinv
 
 
 class RSA:
     e = 65537
 
-    def __init__(self, bits: int = 10):
+    def __init__(self, bits: int = 129):
         self.bits = bits
         self.public_key: tuple[int, int] | None = None
         self.private_key: tuple[int, int] | None = None
@@ -63,11 +64,11 @@ class RSA:
 
         blocks = split_blocks(value, block_size)
         encrypted_blocks = [
-            self.encrypt_block(block, n)
+            self._encrypt_block(block, n)
             for block in blocks
         ]
 
-        b64_cipher = self.ciphertext_to_b64(encrypted_blocks)
+        b64_cipher = blocks_to_b64(encrypted_blocks, n.bit_length())
 
         return b64_cipher, original_length
 
@@ -76,7 +77,7 @@ class RSA:
         d,n = self.private_key
         b64_text, original_length = encrypted_data
 
-        encrypted_blocks = self.b64_to_ciphertext(b64_text)
+        encrypted_blocks = b64_to_blocks(b64_text, n.bit_length())
 
         if not encrypted_blocks:
             return ""
@@ -86,11 +87,11 @@ class RSA:
         decrypted_blocks = []
         for block in encrypted_blocks[:-1]:
             decrypted_blocks.append(
-                int_to_block(self.decrypt_block(block, d, n),block_size)
+                int_to_block(self._decrypt_block(block, d, n),block_size)
             )
 
         decrypted_blocks.append(
-            int_to_block(self.decrypt_block(
+            int_to_block(self._decrypt_block(
                 encrypted_blocks[-1], d, n), original_length % block_size or block_size)
         )
 
@@ -99,44 +100,13 @@ class RSA:
         return decrypted_data.decode("utf-8")
 
 
-    def ciphertext_to_b64(self, blocks: list[int]) -> base64:
-        text = []
-        _, n = self.public_key
-
-        for block in blocks:
-            text.append(
-                int_to_block(block, (n.bit_length() + 7) // 8)
-            )
-
-        decrypted_data = b"".join(text)
-
-        return base64.b64encode(decrypted_data)
-
-
-    def b64_to_ciphertext(self, ciphertext_b64: str) -> list[str]:
-        ciphertext_bytes = base64.b64decode(ciphertext_b64, validate=True)
-        _, n = self.public_key
-
-        cipher_block_size = (n.bit_length() + 7 )// 8
-
-        if len(ciphertext_bytes) % cipher_block_size != 0:
-            raise ValueError("Invalid ciphertext length")
-
-        return [
-            block_to_int(
-                ciphertext_bytes[i:i+cipher_block_size]
-            )
-            for i in range(0, len(ciphertext_bytes), cipher_block_size)
-        ]
-
-
-    def encrypt_block(self, block: bytes, n: int) -> int:
+    def _encrypt_block(self, block: bytes, n: int) -> int:
         value = block_to_int(block)
         if not 0 <= value < n:
             raise ValueError("Block value must be in range [0, n)")
         return power(value, self.e, n)
 
 
-    def decrypt_block(self, block: int, d: int, n: int) -> int:
+    def _decrypt_block(self, block: int, d: int, n: int) -> int:
         value = power(block, d, n)
         return value
