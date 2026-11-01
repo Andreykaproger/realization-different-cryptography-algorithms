@@ -15,7 +15,7 @@ from utils import (
 class RSA:
     e = 65537
 
-    def __init__(self, bits: int = 129):
+    def __init__(self, bits: int = 10):
         self.bits = bits
         self.public_key: tuple[int, int] | None = None
         self.private_key: tuple[int, int] | None = None
