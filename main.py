@@ -1,16 +1,17 @@
 import secrets
 
 from xtea import XTEA
+from rsa import RSA
 from utils import (
+    key_to_bytes,
     key_to_words,
     generate_key,
-    key_to_bytes,
     int_to_block,
     encode_b64
 )
-from rsa import RSA
 from sha_2 import SHA2, avalanche_effect
 from digital_signature import RsaSignature
+from hybrid_protocol import HybridProtocol
 
 
 def main_xtea():
@@ -264,6 +265,125 @@ def main_ds():
         print_verify_details(verify, text, pk)
 
 
+def main_hybrid_protocol():
+
+    print("Гибридный протокол шифрования")
+
+    alice_rsa = RSA(bits=130)
+    bob_rsa = RSA(bits=65)
+
+    alice_public_key, alice_private_key = alice_rsa.generate_keypair()
+    bob_public_key, bob_private_key = bob_rsa.generate_keypair()
+
+    print("=" * 40)
+    print("Ключи участников")
+
+    print("\nАлиса:")
+    print(f"Открытый ключ:  (e={alice_public_key[0]}, n={alice_public_key[1]})")
+    print(f"Закрытый ключ:  (d={alice_private_key[0]}, n={alice_private_key[1]})")
+
+    print("\n" + "-" * 40)
+
+    print("\nБоб:")
+    print(f"Открытый ключ:  (e={bob_public_key[0]}, n={bob_public_key[1]})")
+    print(f"Закрытый ключ:  (d={bob_private_key[0]}, n={bob_private_key[1]})")
+
+    alice = HybridProtocol()
+    bob = HybridProtocol()
+
+    message = input("\nАлиса вводит сообщение для Боба: ")
+
+    print("\n" + "=" * 40)
+    print("ЭТАП 1. Формирование и подписание сообщения")
+    print("=" * 40)
+
+    encryption_result = alice.encrypt(
+        message,
+        alice_private_key,
+        bob_public_key
+    )
+
+    signature_result = encryption_result.signature_result
+
+    print(f"\nАлиса: Исходное сообщение:\n{message}")
+
+    print("\nАлиса: Вычисление SHA-256:")
+    print(f"Хеш (HEX): {signature_result.hash_hex}")
+    print(f"Хеш (INT): {signature_result.int_message}")
+
+    print("\nАлиса: Формирование цифровой подписи:")
+    print(f"Подпись (INT): {signature_result.int_sign}")
+    print(f"Подпись (Base64): {signature_result.b64_sign}")
+
+    print("\nАлиса: Формирование подписанного сообщения:")
+    print(encryption_result.signed_message_json.decode("utf-8"))
+
+    print("\n" + "=" * 40)
+    print("ЭТАП 2. Гибридное шифрование")
+    print("=" * 40)
+
+    session_key = encryption_result.session_key
+
+    print("\nАлиса: Сессионный ключ XTEA:")
+    print(f"Ключ (HEX): {key_to_bytes(session_key).hex()}")
+    print(f"Ключ (INT): {session_key}")
+
+    print("\nАлиса: Шифрование сообщения алгоритмом XTEA:")
+    print(f"Зашифрованные данные (Base64):")
+    print(encryption_result.package.encrypted_data)
+
+    print("\nАлиса: Шифрование сессионного ключа открытым ключом Боба:")
+    print(f"Зашифрованный ключ (Base64):")
+    print(encryption_result.package.encrypted_session_key)
+
+    print("\nАлиса: Формирование пакета для отправки:")
+    print("Пакет содержит:")
+    print("- зашифрованные данные")
+    print("- зашифрованный сессионный ключ")
+
+
+    encrypted_package = encryption_result.package
+
+    print("\n" + "=" * 40)
+    print("ЭТАП 3. Получение и расшифрование сообщения")
+    print("=" * 40)
+
+    print("\nБоб: Получен зашифрованный пакет.")
+
+    decryption_result = bob.decrypt(
+        encrypted_package,
+        bob_private_key,
+        alice_public_key
+    )
+
+    print("\n:Боб: Восстановленный сессионный ключ:")
+    print(f"Ключ (HEX): {key_to_bytes(decryption_result.decrypted_session_key).hex()}")
+    print(f"Ключ (INT): {decryption_result.decrypted_session_key}")
+
+    print("\nБоб: Расшифрование данных алгоритмом XTEA:")
+    print(decryption_result.decrypted_data.decode("utf-8"))
+
+    print("\nБоб: Проверка цифровой подписи:")
+    verify_check = decryption_result.verify_check
+
+    print(f"Вычисленный хеш (HEX): {verify_check.hash_hex}")
+    print(f"Вычисленный хеш (INT): {verify_check.int_message}")
+    print(f"Восстановленный хеш (INT): {verify_check.sign_hash}")
+
+    print("\n" + "=" * 40)
+    print("Результат обмена сообщениями")
+    print("=" * 40)
+
+    print(f"\nПолученное сообщение:\n{decryption_result.message}")
+
+    if decryption_result.is_signature_valid:
+        print("\n[+] Цифровая подпись действительна.")
+        print("[+] Целостность сообщения подтверждена.")
+    else:
+        print("\n[-] Цифровая подпись недействительна!")
+        print("[-] Проверка целостности не пройдена.")
+
+
 def main():
     print(
         "Выберите режим:\n"
@@ -271,6 +391,7 @@ def main():
         "2. Шифрование RSA\n"
         "3. Хеширование SHA-2\n"
         "4. Электронная цифровая подпись\n"
+        "5. Гибридный протокол\n"
         "Выберете необходимый параметр:"
     )
     tries = 0
@@ -285,6 +406,8 @@ def main():
                 return main_sha2()
             elif parameter == 4:
                 return main_ds()
+            elif parameter == 5:
+                return main_hybrid_protocol()
 
             else:
                 raise IndexError("Выберете вариант от 1 до 4:")

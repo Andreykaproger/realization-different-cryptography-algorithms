@@ -8,6 +8,9 @@ from utils import (
 
 
 class XTEA:
+    KEY_WORDS = 4
+    WORD_SIZE = 32
+    KEY_SIZE = KEY_WORDS * (WORD_SIZE // 8)
     MASK = 0xFFFFFFFF
     DELTA = 0x9E3779B9
     ROUNDS = 32

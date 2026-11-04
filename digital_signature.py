@@ -1,27 +1,8 @@
-from dataclasses import dataclass
-
 from sha_2 import SHA2
 from utils import block_to_int, int_to_block
 from math_utils import power
 from utils import encode_b64, decode_b64
-
-
-@dataclass
-class SignatureResult:
-    message_hash: bytes
-    hash_hex: str
-    int_message: int
-    int_sign: int
-    b64_sign: str
-
-@dataclass
-class VerifyCheck:
-    message_hash: bytes
-    hash_hex: str
-    int_message: int
-    int_sign: int
-    sign_hash: int
-    is_valid: bool
+from models import VerifyCheck, SignatureResult
 
 
 class RsaSignature:

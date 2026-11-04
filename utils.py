@@ -28,8 +28,12 @@ def key_to_words(key):
     return struct.unpack(">4I", key)
 
 
-def key_to_bytes(key):
+def key_to_bytes(key: tuple):
     return struct.pack(">4I", *key)
+
+
+def bytes_to_key(data: bytes) -> tuple:
+    return struct.unpack(">4I", data)
 
 
 def generate_key():
